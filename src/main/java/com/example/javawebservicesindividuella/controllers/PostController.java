@@ -40,16 +40,11 @@ public class PostController {
 
     //Raderar ett blogginlägg
     @DeleteMapping("/deletepost/{id}")
-    public ResponseEntity<String> deletePost(@PathVariable Long id,Principal principal, Authentication authentication) {
-        return new ResponseEntity<>(postService.deletePost(id,principal,authentication),HttpStatus.OK);
+    public ResponseEntity<String> deletePost(@PathVariable Long id,@AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(postService.deletePost(id,jwt),HttpStatus.OK);
     }
 
 
-    //TODO: använd jwt istället för princepal
-    /*@GetMapping("/auth")
-    public ResponseEntity<String>recive(@AuthenticationPrincipal Jwt jwt){
-        return ResponseEntity.ok(postService.getAuth(jwt.getClaim(JwtClaimNames.SUB)));
-    }*/
 
 
 
@@ -57,14 +52,14 @@ public class PostController {
     ///User endpoints
     //Skapar ett nytt blogginlägg
     @PostMapping("/newpost")
-    public ResponseEntity<Post>newPost(@RequestBody Post post, Principal principal) {
-        return new ResponseEntity<>(postService.newPost(post,principal), HttpStatus.CREATED);
+    public ResponseEntity<Post>newPost(@RequestBody Post post, @AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(postService.newPost(post,jwt), HttpStatus.CREATED);
     }
 
     //Uppdaterar ett blogginlägg
     @PutMapping("/updatepost")
-    public ResponseEntity<Post> updatePost(@RequestBody Post post, Principal principal) {
-        return new ResponseEntity<>(postService.updatePost(post,principal), HttpStatus.OK);
+    public ResponseEntity<Post> updatePost(@RequestBody Post post, @AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(postService.updatePost(post,jwt), HttpStatus.OK);
     }
 
 
