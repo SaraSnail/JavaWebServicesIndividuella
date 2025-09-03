@@ -3,7 +3,7 @@ package com.example.javawebservicesindividuella.entities;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "bloggs")
+@Table(name = "blogs")
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,10 +16,9 @@ public class Post {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "author", nullable = false)//Vill få in sub här
+    @Column(name = "author", nullable = false)
     private String author;
 
-    //Måste ha med denna?
     public Post() {
     }
 
@@ -38,10 +37,9 @@ public class Post {
         return id;
     }
 
-    /*
     public void setId(Long id) {
         this.id = id;
-    }*/
+    }
 
     public String getTitle() {
         return title;

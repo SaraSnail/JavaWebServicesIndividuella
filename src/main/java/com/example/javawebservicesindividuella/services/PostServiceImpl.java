@@ -2,6 +2,7 @@ package com.example.javawebservicesindividuella.services;
 
 import com.example.javawebservicesindividuella.converters.JwtAuthConverter;
 import com.example.javawebservicesindividuella.entities.Post;
+import com.example.javawebservicesindividuella.exceptions.NotFoundException;
 import com.example.javawebservicesindividuella.repositories.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,9 @@ public class PostServiceImpl implements PostService {
     @Override
     public Post getPostById(Long id) {
         Optional<Post> post = postRepository.findById(id);
-        postExists(post,id);
+        if(post.isEmpty()) {
+            throw new NotFoundException(id);
+        }
 
         return post.get();
     }
@@ -62,10 +65,12 @@ public class PostServiceImpl implements PostService {
 
         String userId = jwt.getClaim(JwtClaimNames.SUB);
 
-        postExists(postOptional, post.id);
+        if(postOptional.isEmpty()){
+            throw new NotFoundException(post.getId());
+        }
 
         if(!postOptional.get().getAuthor().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not the author of the post and therefor can not update this post");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not the author of the post and therefore can not update this post");
         }
 
         validatePost(post);
@@ -84,22 +89,31 @@ public class PostServiceImpl implements PostService {
     public String deletePost(Long id, Jwt jwt) {
         Optional<Post> postOptional = postRepository.findById(id);
 
-        postExists(postOptional,id);
+        if(postOptional.isEmpty()) {
+            throw new NotFoundException(id);
+        }
+
         String user = jwt.getClaim(JwtClaimNames.SUB);
 
-        AbstractAuthenticationToken token = jwtAuthConverter.convert(jwt);
+        if(!postOptional.get().getAuthor().equals(user)) {
 
-        List<String>roles = token.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .filter(role -> role.startsWith("ROLE_"))
-                .collect(Collectors.toList());
+            AbstractAuthenticationToken token = jwtAuthConverter.convert(jwt);
+            if(token == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid token");
+            }
 
-        roles.replaceAll(role -> role.replaceAll("ROLE_", ""));
+            List<String>roles = token.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(role -> role.startsWith("ROLE_"))
+                    .collect(Collectors.toList());
 
+            roles.replaceAll(role -> role.replace("ROLE_", ""));
 
-        if(!postOptional.get().getAuthor().equals(user) && !roles.contains("admin")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not an admin or the author of the post and therefor cannot delete this post");
+            if(!roles.contains("admin")) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not an admin or the author of the post and therefore cannot delete this post");
+            }
         }
+
 
         postRepository.deleteById(id);
         return "Post with id "+id+" deleted by author: "+user;
@@ -111,11 +125,6 @@ public class PostServiceImpl implements PostService {
         return "Total post count: "+totalPosts;
     }
 
-    private void postExists(Optional<Post> post, Long id) {
-        if(post.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No post with id "+id+" found");
-        }
-    }
 
     private void validatePost(Post post) {
         if(post.getTitle() == null || post.getTitle().isEmpty()){
@@ -129,11 +138,6 @@ public class PostServiceImpl implements PostService {
         }
         if(!(post.getTitle().length() >= 3)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Title length should be 3 or more");
-        }
-
-        //TODO: Ha någon hantering för om titlar är den samma?
-        if(postRepository.findAll().stream().anyMatch(post1 -> post1.getTitle().toLowerCase().startsWith(post.getTitle().toLowerCase()))){
-            throw new ResponseStatusException(HttpStatus.CONFLICT,"Title already exists");
         }
 
     }
