@@ -49,6 +49,42 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public String deletePost(Long id, Jwt jwt) {
+        Optional<Post> postOptional = postRepository.findById(id);
+
+        if(postOptional.isEmpty()) {
+            throw new NotFoundException(id);
+        }
+
+        String user = jwt.getClaim(JwtClaimNames.SUB);
+
+        if(!postOptional.get().getAuthor().equals(user)) {
+
+            AbstractAuthenticationToken token = jwtAuthConverter.convert(jwt);
+            if(token == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid token");
+            }
+
+            List<String>roles = token.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(role -> role.startsWith("ROLE_"))
+                    .collect(Collectors.toList());
+
+            roles.replaceAll(role -> role.replace("ROLE_", ""));
+
+            if(!roles.contains("admin")) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not an admin or the author of the post and therefore cannot delete this post");
+            }
+        }
+
+
+        postRepository.deleteById(id);
+        return "Post with id "+id+" deleted by author: "+user;
+    }
+
+
+
+    @Override
     public Post newPost(Post post, Jwt jwt) {
         validatePost(post);
 
@@ -85,45 +121,14 @@ public class PostServiceImpl implements PostService {
         return postRepository.save(existingPost);
     }
 
-    @Override
-    public String deletePost(Long id, Jwt jwt) {
-        Optional<Post> postOptional = postRepository.findById(id);
-
-        if(postOptional.isEmpty()) {
-            throw new NotFoundException(id);
-        }
-
-        String user = jwt.getClaim(JwtClaimNames.SUB);
-
-        if(!postOptional.get().getAuthor().equals(user)) {
-
-            AbstractAuthenticationToken token = jwtAuthConverter.convert(jwt);
-            if(token == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid token");
-            }
-
-            List<String>roles = token.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .filter(role -> role.startsWith("ROLE_"))
-                    .collect(Collectors.toList());
-
-            roles.replaceAll(role -> role.replace("ROLE_", ""));
-
-            if(!roles.contains("admin")) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"You are not an admin or the author of the post and therefore cannot delete this post");
-            }
-        }
-
-
-        postRepository.deleteById(id);
-        return "Post with id "+id+" deleted by author: "+user;
-    }
 
     @Override
     public String countPosts() {
         int totalPosts = postRepository.findAll().size();
         return "Total post count: "+totalPosts;
     }
+
+
 
 
     private void validatePost(Post post) {
